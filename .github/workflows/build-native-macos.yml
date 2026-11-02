@@ -1,0 +1,62 @@
+name: Build Native macOS UI
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/native-macos-ui
+    paths:
+      - 'NativeMac/**'
+      - '.github/workflows/build-native-macos.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  macos:
+    name: Build macOS app and DMG
+    runs-on: macos-26
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Verify tools
+        run: |
+          xcodebuild -version
+          swift --version
+      - name: Build native Swift app
+        working-directory: NativeMac
+        run: swift build -c release --product OpenMTPNative
+      - name: Package .app and .dmg
+        run: |
+          set -euo pipefail
+          APP="dist/OpenMTP Native.app"
+          mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" dist/dmg
+          cp NativeMac/.build/release/OpenMTPNative "$APP/Contents/MacOS/OpenMTPNative"
+          chmod +x "$APP/Contents/MacOS/OpenMTPNative"
+          cat > "$APP/Contents/Info.plist" <<'PLIST'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>CFBundleExecutable</key><string>OpenMTPNative</string>
+            <key>CFBundleIdentifier</key><string>com.openmtp.native.preview</string>
+            <key>CFBundleName</key><string>OpenMTP Native</string>
+            <key>CFBundleDisplayName</key><string>OpenMTP Native</string>
+            <key>CFBundlePackageType</key><string>APPL</string>
+            <key>CFBundleShortVersionString</key><string>0.1.0</string>
+            <key>CFBundleVersion</key><string>1</string>
+            <key>LSMinimumSystemVersion</key><string>26.0</string>
+            <key>NSHighResolutionCapable</key><true/>
+          </dict></plist>
+          PLIST
+          plutil -lint "$APP/Contents/Info.plist"
+          codesign --force --deep --sign - "$APP"
+          cp -R "$APP" dist/dmg/
+          ln -s /Applications dist/dmg/Applications
+          hdiutil create -volname "OpenMTP Native" -srcfolder dist/dmg -ov -format UDZO dist/OpenMTPNative-macOS.dmg
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: OpenMTPNative-macOS
+          path: dist/OpenMTPNative-macOS.dmg
+          if-no-files-found: error
+          retention-days: 30
