@@ -59,9 +59,9 @@ private func fixtureDate(_ iso8601: String) -> Date {
         .init(name: "Movies", kind: "Folder", size: "—", sizeBytes: nil, modified: "Oct 27, 2026", modifiedAt: fixtureDate("2026-10-27T12:00:00Z"), symbol: "folder.fill", tint: .blue, isFolder: true),
         .init(name: "Music", kind: "Folder", size: "—", sizeBytes: nil, modified: "Oct 21, 2026", modifiedAt: fixtureDate("2026-10-21T12:00:00Z"), symbol: "folder.fill", tint: .blue, isFolder: true),
         .init(name: "Pictures", kind: "Folder", size: "—", sizeBytes: nil, modified: "Oct 20, 2026", modifiedAt: fixtureDate("2026-10-20T12:00:00Z"), symbol: "folder.fill", tint: .blue, isFolder: true),
-        .init(name: "VID_20261028.mp4", kind: "MPEG-4 Movie", size: "152.8 MB", sizeBytes: 160221389, modified: "Oct 28, 2026", modifiedAt: fixtureDate("2026-10-28T12:00:00Z"), symbol: "film", tint: .purple, isFolder: false),
-        .init(name: "IMG_2048.jpg", kind: "JPEG Image", size: "3.4 MB", sizeBytes: 3565158, modified: "Oct 25, 2026", modifiedAt: fixtureDate("2026-10-25T12:00:00Z"), symbol: "photo", tint: .mint, isFolder: false),
-        .init(name: "Notes.pdf", kind: "PDF Document", size: "1.2 MB", sizeBytes: 1258291, modified: "Oct 22, 2026", modifiedAt: fixtureDate("2026-10-22T12:00:00Z"), symbol: "doc.richtext", tint: .red, isFolder: false)
+        .init(name: "VID_20261028.mp4", kind: "MPEG-4 Movie", size: "152.8 MB", sizeBytes: 152800000, modified: "Oct 28, 2026", modifiedAt: fixtureDate("2026-10-28T12:00:00Z"), symbol: "film", tint: .purple, isFolder: false),
+        .init(name: "IMG_2048.jpg", kind: "JPEG Image", size: "3.4 MB", sizeBytes: 3400000, modified: "Oct 25, 2026", modifiedAt: fixtureDate("2026-10-25T12:00:00Z"), symbol: "photo", tint: .mint, isFolder: false),
+        .init(name: "Notes.pdf", kind: "PDF Document", size: "1.2 MB", sizeBytes: 1200000, modified: "Oct 22, 2026", modifiedAt: fixtureDate("2026-10-22T12:00:00Z"), symbol: "doc.richtext", tint: .red, isFolder: false)
     ]
 
     var filteredItems: [BrowserItem] {
