@@ -39,7 +39,9 @@ jobs:
         run: |
           set -euo pipefail
           APP="dist/OpenMTP Native.app"
-          mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" dist/dmg
+          DMG_SOURCE="dist/OpenMTP Native"
+          DMG_PATH="dist/OpenMTPNative-macOS.dmg"
+          mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$DMG_SOURCE"
           cp NativeMac/.build/release/OpenMTPNative "$APP/Contents/MacOS/OpenMTPNative"
           chmod +x "$APP/Contents/MacOS/OpenMTPNative"
           cat > "$APP/Contents/Info.plist" <<'PLIST'
@@ -60,10 +62,10 @@ jobs:
           plutil -lint "$APP/Contents/Info.plist"
           codesign --force --deep --sign - "$APP"
           codesign --verify --deep --strict "$APP"
-          cp -R "$APP" dist/dmg/
-          ln -s /Applications dist/dmg/Applications
-          hdiutil create -volname "OpenMTP Native" -srcfolder dist/dmg -ov -format UDZO dist/OpenMTPNative-macOS.dmg
-          hdiutil verify dist/OpenMTPNative-macOS.dmg
+          cp -R "$APP" "$DMG_SOURCE/"
+          diskutil image create from --format UDZO "$DMG_SOURCE" "$DMG_PATH"
+          diskutil image info "$DMG_PATH"
+          test -s "$DMG_PATH"
       - name: Upload installer
         uses: actions/upload-artifact@v4
         with:
