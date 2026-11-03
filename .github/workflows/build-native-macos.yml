@@ -12,6 +12,12 @@ on:
 permissions:
   contents: read
 
+# Keep only the newest UI build for this branch; a stale queued build cannot
+# produce a useful artifact once a newer commit exists.
+concurrency:
+  group: native-macos-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   macos:
     name: Build macOS app and DMG
