@@ -8,6 +8,7 @@ on:
     paths-ignore:
       - 'NativeMac/**'
       - '.github/workflows/build-native-macos.yml'
+      - '.github/workflows/main.yml'
 
 permissions:
   contents: read
