@@ -21,7 +21,7 @@ concurrency:
 jobs:
   macos:
     name: Build macOS app and DMG
-    runs-on: macos-26
+    runs-on: xcode-27
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -29,7 +29,9 @@ jobs:
         run: |
           xcodebuild -version
           swift --version
-          xcrun --sdk macosx --show-sdk-version
+          SDK_VERSION="$(xcrun --sdk macosx --show-sdk-version)"
+          echo "macOS SDK: $SDK_VERSION"
+          test "${SDK_VERSION%%.*}" -ge 27
       - name: Build native Swift app
         working-directory: NativeMac
         run: swift build -c release --product OpenMTPNative
@@ -51,7 +53,7 @@ jobs:
             <key>CFBundlePackageType</key><string>APPL</string>
             <key>CFBundleShortVersionString</key><string>0.1.0</string>
             <key>CFBundleVersion</key><string>1</string>
-            <key>LSMinimumSystemVersion</key><string>26.0</string>
+            <key>LSMinimumSystemVersion</key><string>27.0</string>
             <key>NSHighResolutionCapable</key><true/>
           </dict></plist>
           PLIST
