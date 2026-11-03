@@ -1,6 +1,6 @@
 # OpenMTP Native — UI Preview
 
-A separate, **fully native SwiftUI + AppKit UI prototype** for macOS 26 and later. Its visual design uses system navigation, sidebar materials, controls, typography, SF Symbols, native tables, the system inspector, and native toolbar/search. macOS supplies Liquid Glass appearance to supported system surfaces.
+A separate, **fully native SwiftUI + AppKit UI prototype** for macOS 27 and later. Its visual design uses system navigation, sidebar materials, controls, typography, SF Symbols, native tables, the system inspector, and native toolbar/search. macOS supplies Liquid Glass appearance to supported system surfaces.
 
 ## Scope
 
@@ -13,7 +13,7 @@ A separate, **fully native SwiftUI + AppKit UI prototype** for macOS 26 and late
 
 ## Local preview
 
-Requires Xcode with Swift 6.2+ and the macOS 26 SDK.
+Requires Xcode 27+ and the macOS 27 SDK.
 
 ```bash
 cd NativeMac
