@@ -12,14 +12,6 @@ struct OpenMTPNativeApp: App {
         }
         .defaultSize(width: 1260, height: 790)
         .windowToolbarStyle(.unified)
-        .commands {
-            CommandGroup(replacing: .newItem) {
-                Button("New Window") {
-                    NSApplication.shared.sendAction(#selector(NSWindow.makeKeyAndOrderFront(_:)), to: nil, from: nil)
-                }
-                .keyboardShortcut("n", modifiers: .command)
-            }
-        }
 
         Settings {
             PreferencesView()
