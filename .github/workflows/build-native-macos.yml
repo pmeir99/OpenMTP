@@ -2,9 +2,9 @@ name: Build Native macOS UI
 
 on:
   workflow_dispatch:
-  push:
+  pull_request:
     branches:
-      - feature/native-macos-ui
+      - master
     paths:
       - 'NativeMac/**'
       - 'package.json'
