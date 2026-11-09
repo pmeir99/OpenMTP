@@ -180,6 +180,8 @@ private typealias MTPCallback = @convention(c) (UnsafeMutablePointer<CChar>?) ->
 
 actor KalamBackend {
     private var libraryHandle: UnsafeMutableRawPointer?
+    private var invocationInProgress = false
+    private var invocationWaiters: [CheckedContinuation<Void, Never>] = []
 
     func initialize() async throws -> MTPDeviceSnapshot {
         try decodeData(MTPDeviceSnapshot.self, from: await invoke("Initialize"))
@@ -251,8 +253,12 @@ actor KalamBackend {
         onPreprocess: @escaping (String) -> Void = { _ in },
         onProgress: @escaping (String) -> Void = { _ in }
     ) async throws -> String {
-        let functionAddress = try address(of: symbol)
-        return try await withCheckedThrowingContinuation { continuation in
+        // The Kalam C bridge has one process-wide callback slot. Keep only one call in
+        // flight so a device poll or second UI action cannot replace its handlers.
+        await acquireInvocation()
+        do {
+            let functionAddress = try address(of: symbol)
+            let result = try await withCheckedThrowingContinuation { continuation in
             MTPCallbackRouter.shared.install(result: { payload in
                 do {
                     try Self.throwIfBackendError(payload)
@@ -279,6 +285,30 @@ actor KalamBackend {
                 let function = unsafeBitCast(functionAddress, to: SimpleKalamFunction.self)
                 function(resultCallback)
             }
+            }
+            releaseInvocation()
+            return result
+        } catch {
+            releaseInvocation()
+            throw error
+        }
+    }
+
+    private func acquireInvocation() async {
+        if !invocationInProgress {
+            invocationInProgress = true
+            return
+        }
+        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+            invocationWaiters.append(continuation)
+        }
+    }
+
+    private func releaseInvocation() {
+        if invocationWaiters.isEmpty {
+            invocationInProgress = false
+        } else {
+            invocationWaiters.removeFirst().resume()
         }
     }
 
