@@ -40,17 +40,31 @@ struct FileListView: View {
         .tableStyle(.inset(alternatesRowBackgrounds: true))
         .contextMenu(forSelectionType: String.self) { ids in
             Button("Open") {
-                if let item = model.items.first(where: { ids.contains($0.id) }), item.isFolder { path.append(item.name) }
+                guard let item = model.items.first(where: { ids.contains($0.id) && $0.isFolder }) else { return }
+                model.selectedItems = [item.id]
+                path.append(item.name)
             }
-            Button("Get Info") { model.inspectorVisible = true }
+            .disabled(!model.items.contains(where: { ids.contains($0.id) && $0.isFolder }))
+            Button("Get Info") {
+                model.selectedItems = Set(ids)
+                model.inspectorVisible = true
+            }
             Divider()
-            Button("Copy to Mac") { onDownload() }
+            Button("Copy to Mac") {
+                model.selectedItems = Set(ids)
+                onDownload()
+            }
                 .disabled(ids.isEmpty)
             Button("Rename") {
-                if let item = model.items.first(where: { ids.contains($0.id) }) { onRename(item) }
+                guard let item = model.items.first(where: { ids.contains($0.id) }) else { return }
+                model.selectedItems = [item.id]
+                onRename(item)
             }
             .disabled(ids.count != 1)
-            Button("Delete", role: .destructive) { onDelete() }
+            Button("Delete", role: .destructive) {
+                model.selectedItems = Set(ids)
+                onDelete()
+            }
                 .disabled(ids.isEmpty)
         }
     }
@@ -59,6 +73,9 @@ struct FileListView: View {
 struct FileGridView: View {
     @Environment(BrowserModel.self) private var model
     @Binding var path: [String]
+    var onRename: (BrowserItem) -> Void
+    var onDelete: () -> Void
+    var onDownload: () -> Void
     private let columns = [GridItem(.adaptive(minimum: 112, maximum: 155), spacing: 16)]
 
     var body: some View {
@@ -66,7 +83,11 @@ struct FileGridView: View {
             LazyVGrid(columns: columns, spacing: 24) {
                 ForEach(model.filteredItems) { item in
                     Button {
-                        model.selectedItems = [item.id]
+                        if model.selectedItems.contains(item.id) {
+                            model.selectedItems.remove(item.id)
+                        } else {
+                            model.selectedItems.insert(item.id)
+                        }
                     } label: {
                         VStack(spacing: 9) {
                             Image(systemName: item.symbol)
@@ -86,8 +107,36 @@ struct FileGridView: View {
                     }
                     .buttonStyle(.plain)
                     .simultaneousGesture(TapGesture(count: 2).onEnded {
-                        if item.isFolder { path.append(item.name) }
+                        if item.isFolder {
+                            model.selectedItems = [item.id]
+                            path.append(item.name)
+                        }
                     })
+                    .contextMenu {
+                        Button("Open") {
+                            model.selectedItems = [item.id]
+                            if item.isFolder { path.append(item.name) }
+                        }
+                        .disabled(!item.isFolder)
+                        Button("Get Info") {
+                            model.selectedItems = [item.id]
+                            model.inspectorVisible = true
+                        }
+                        Divider()
+                        Button("Copy to Mac") {
+                            model.selectedItems = [item.id]
+                            onDownload()
+                        }
+                        Button("Rename") {
+                            model.selectedItems = [item.id]
+                            onRename(item)
+                        }
+                        Divider()
+                        Button("Delete", role: .destructive) {
+                            model.selectedItems = [item.id]
+                            onDelete()
+                        }
+                    }
                 }
             }
             .padding(24)
@@ -106,13 +155,20 @@ struct InspectorView: View {
                 .padding(.top, 28)
             Text("Information")
                 .font(.title3.weight(.semibold))
-            Text(model.selectedItems.count == 0 ? "Select a file to inspect its details." : "\(model.selectedItems.count) item(s) selected")
+            Text(model.selectedItems.isEmpty ? "Select a file to inspect its details." : "\(model.selectedItems.count) item(s) selected")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
             Divider()
             LabeledContent("Device", value: model.deviceName)
             LabeledContent("Connection", value: model.isConnected ? "USB · MTP" : "Not connected")
+            if model.selectedBrowserItems.count == 1, let item = model.selectedBrowserItems.first {
+                LabeledContent("Name", value: item.name)
+                LabeledContent("Kind", value: item.kind)
+                if !item.isFolder { LabeledContent("Size", value: item.size) }
+                LabeledContent("Modified", value: item.modified)
+                LabeledContent("Path", value: item.path)
+            }
             Spacer()
         }
         .padding(22)
