@@ -220,8 +220,8 @@ actor KalamBackend {
         storageID: UInt32,
         sources: [String],
         destination: String,
-        onPreprocess: @escaping (String) -> Void,
-        onProgress: @escaping (MTPTransferProgress) -> Void
+        onPreprocess: @escaping @Sendable (String) -> Void,
+        onProgress: @escaping @Sendable (MTPTransferProgress) -> Void
     ) async throws {
         let input = try json([
             "storageId": storageID,
