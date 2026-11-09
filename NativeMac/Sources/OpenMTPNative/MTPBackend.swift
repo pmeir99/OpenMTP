@@ -146,6 +146,14 @@ private final class MTPCallbackRouter: @unchecked Sendable {
         handler?(payload)
     }
 
+    func clear() {
+        lock.lock()
+        result = nil
+        preprocess = nil
+        progress = nil
+        lock.unlock()
+    }
+
     enum Kind { case result, preprocess, progress }
 }
 
@@ -235,10 +243,6 @@ actor KalamBackend {
         _ = try await invoke(symbol, input: input, onPreprocess: onPreprocess) { raw in
             guard let data = raw.data(using: .utf8),
                   let event = try? JSONDecoder().decode(MTPTransferProgress.self, from: data) else { return }
-            if let error = event.error, !error.isEmpty {
-                onProgress(event)
-                return
-            }
             onProgress(event)
         }
     }
@@ -253,42 +257,44 @@ actor KalamBackend {
         onPreprocess: @escaping (String) -> Void = { _ in },
         onProgress: @escaping (String) -> Void = { _ in }
     ) async throws -> String {
-        // The Kalam C bridge has one process-wide callback slot. Keep only one call in
-        // flight so a device poll or second UI action cannot replace its handlers.
+        // Kalam has one process-wide callback slot and one USB session. Calls must
+        // stay serialized even though an actor can re-enter while awaiting a result.
         await acquireInvocation()
         do {
             let functionAddress = try address(of: symbol)
             let result = try await withCheckedThrowingContinuation { continuation in
-            MTPCallbackRouter.shared.install(result: { payload in
-                do {
-                    try Self.throwIfBackendError(payload)
-                    continuation.resume(returning: payload)
-                } catch {
-                    continuation.resume(throwing: error)
-                }
-            }, preprocess: onPreprocess, progress: onProgress)
-
-            let resultCallback = unsafeBitCast(openMTPKalamResult as MTPCallback, to: UnsafeMutableRawPointer.self)
-            if let input {
-                input.withCString { cInput in
-                    if symbol == "UploadFiles" || symbol == "DownloadFiles" {
-                        let transfer = unsafeBitCast(functionAddress, to: TransferKalamFunction.self)
-                        let preprocessCallback = unsafeBitCast(openMTPKalamPreprocess as MTPCallback, to: UnsafeMutableRawPointer.self)
-                        let progressCallback = unsafeBitCast(openMTPKalamProgress as MTPCallback, to: UnsafeMutableRawPointer.self)
-                        transfer(cInput, preprocessCallback, progressCallback, resultCallback)
-                    } else {
-                        let function = unsafeBitCast(functionAddress, to: InputKalamFunction.self)
-                        function(cInput, resultCallback)
+                MTPCallbackRouter.shared.install(result: { payload in
+                    do {
+                        try Self.throwIfBackendError(payload)
+                        continuation.resume(returning: payload)
+                    } catch {
+                        continuation.resume(throwing: error)
                     }
+                }, preprocess: onPreprocess, progress: onProgress)
+
+                let resultCallback = unsafeBitCast(openMTPKalamResult as MTPCallback, to: UnsafeMutableRawPointer.self)
+                if let input {
+                    input.withCString { cInput in
+                        if symbol == "UploadFiles" || symbol == "DownloadFiles" {
+                            let transfer = unsafeBitCast(functionAddress, to: TransferKalamFunction.self)
+                            let preprocessCallback = unsafeBitCast(openMTPKalamPreprocess as MTPCallback, to: UnsafeMutableRawPointer.self)
+                            let progressCallback = unsafeBitCast(openMTPKalamProgress as MTPCallback, to: UnsafeMutableRawPointer.self)
+                            transfer(cInput, preprocessCallback, progressCallback, resultCallback)
+                        } else {
+                            let function = unsafeBitCast(functionAddress, to: InputKalamFunction.self)
+                            function(cInput, resultCallback)
+                        }
+                    }
+                } else {
+                    let function = unsafeBitCast(functionAddress, to: SimpleKalamFunction.self)
+                    function(resultCallback)
                 }
-            } else {
-                let function = unsafeBitCast(functionAddress, to: SimpleKalamFunction.self)
-                function(resultCallback)
             }
-            }
+            MTPCallbackRouter.shared.clear()
             releaseInvocation()
             return result
         } catch {
+            MTPCallbackRouter.shared.clear()
             releaseInvocation()
             throw error
         }
@@ -377,4 +383,4 @@ private struct MTPEnvelope<Value: Decodable>: Decodable {
     var error: String?
     var data: Value?
 }
-
+                    }
