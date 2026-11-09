@@ -71,7 +71,7 @@ struct BrowserWindow: View {
         return path.last ?? model.selectedStorage?.info.storageDescription ?? "Files"
     }
 
-    private var toolbar: some ToolbarContent {
+    @ToolbarContentBuilder private var toolbar: some ToolbarContent {
         @Bindable var model = model
         ToolbarItemGroup(placement: .navigation) {
             Button { if !path.isEmpty { path.removeLast() } } label: { Image(systemName: "chevron.left") }

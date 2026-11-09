@@ -56,7 +56,7 @@ struct BrowserItem: Identifiable, Hashable {
 
     private static func symbol(for record: MTPFileRecord) -> String {
         if record.isFolder { return "folder.fill" }
-        switch record.extensionName.lowercased() {
+        return switch record.extensionName.lowercased() {
         case "jpg", "jpeg", "png", "heic", "webp": "photo"
         case "mp4", "mov", "mkv", "avi": "film"
         case "mp3", "wav", "m4a", "flac": "music.note"
@@ -67,7 +67,7 @@ struct BrowserItem: Identifiable, Hashable {
     }
 
     private static func tint(for ext: String) -> Color {
-        switch ext.lowercased() {
+        return switch ext.lowercased() {
         case "jpg", "jpeg", "png", "heic", "webp": .mint
         case "mp4", "mov", "mkv", "avi": .purple
         case "pdf": .red
@@ -192,7 +192,7 @@ struct TransferQueueItem: Identifiable {
             storages = try await backend.storages()
             selectedStorageID = storages.first?.sid
             currentPath = "/"
-            if let selectedStorageID { try await loadDirectory(storageID: selectedStorageID, path: "/") }
+            if let selectedStorageID { await loadDirectory(storageID: selectedStorageID, path: "/") }
             recentActivity.insert("Connected to \(deviceName)", at: 0)
         } catch {
             isConnected = false
