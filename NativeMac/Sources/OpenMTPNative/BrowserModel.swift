@@ -133,22 +133,23 @@ struct TransferQueueItem: Identifiable {
 
     var filteredItems: [BrowserItem] {
         let filtered = search.isEmpty ? items : items.filter { $0.name.localizedCaseInsensitiveContains(search) }
-        switch sorting {
-        case "Kind":
-            return filtered.sorted { $0.kind == $1.kind ? nameBefore($0, $1) : $0.kind < $1.kind }
-        case "Size":
-            return filtered.sorted {
+        return filtered.sorted {
+            guard $0.isFolder == $1.isFolder else { return $0.isFolder }
+            switch sorting {
+            case "Kind":
+                return $0.kind == $1.kind ? nameBefore($0, $1) : $0.kind < $1.kind
+            case "Size":
                 switch ($0.sizeBytes, $1.sizeBytes) {
                 case let (lhs?, rhs?) where lhs != rhs: return lhs < rhs
                 case (nil, _?): return true
                 case (_?, nil): return false
                 default: return nameBefore($0, $1)
                 }
+            case "Date Modified":
+                return $0.modifiedAt == $1.modifiedAt ? nameBefore($0, $1) : $0.modifiedAt > $1.modifiedAt
+            default:
+                return nameBefore($0, $1)
             }
-        case "Date Modified":
-            return filtered.sorted { $0.modifiedAt == $1.modifiedAt ? nameBefore($0, $1) : $0.modifiedAt < $1.modifiedAt }
-        default:
-            return filtered.sorted(by: nameBefore)
         }
     }
 
@@ -158,6 +159,10 @@ struct TransferQueueItem: Identifiable {
 
     var selectedStorage: MTPStorageRecord? {
         storages.first { $0.sid == selectedStorageID }
+    }
+
+    var selectedBrowserItems: [BrowserItem] {
+        items.filter { selectedItems.contains($0.id) }
     }
 
     var storageSummary: String {
@@ -172,10 +177,40 @@ struct TransferQueueItem: Identifiable {
     func startDeviceMonitor() async {
         guard !monitorStarted else { return }
         monitorStarted = true
+        defer { monitorStarted = false }
         await connectIfNeeded()
         while !Task.isCancelled {
-            try? await Task.sleep(for: .seconds(6))
-            if !isConnected { await connectIfNeeded() }
+            do { try await Task.sleep(for: .seconds(6)) }
+            catch { break }
+            if isConnected {
+                do {
+                    let latestStorages = try await backend.storages()
+                    if latestStorages != storages { storages = latestStorages }
+                    if latestStorages.isEmpty {
+                        selectedStorageID = nil
+                        currentPath = "/"
+                        items = []
+                        selectedItems.removeAll()
+                        connectionMessage = "The device is connected, but no storage is available."
+                    } else if selectedStorageID == nil || !latestStorages.contains(where: { $0.sid == selectedStorageID }) {
+                        selectedStorageID = latestStorages.first?.sid
+                        currentPath = "/"
+                        selectedItems.removeAll()
+                        await loadDirectory()
+                    }
+                } catch {
+                    isConnected = false
+                    deviceInfo = nil
+                    storages = []
+                    selectedStorageID = nil
+                    items = []
+                    selectedItems.removeAll()
+                    connectionMessage = Self.connectionHint(for: error.localizedDescription)
+                    lastError = error.localizedDescription
+                }
+            } else {
+                await connectIfNeeded()
+            }
         }
     }
 
@@ -191,15 +226,17 @@ struct TransferQueueItem: Identifiable {
             connectionMessage = "Connected over USB"
             storages = try await backend.storages()
             selectedStorageID = storages.first?.sid
+            if selectedStorageID == nil { connectionMessage = "The device is connected, but no storage is available." }
             currentPath = "/"
             if let selectedStorageID { await loadDirectory(storageID: selectedStorageID, path: "/") }
-            recentActivity.insert("Connected to \(deviceName)", at: 0)
+            recordActivity("Connected to \(deviceName)")
         } catch {
             isConnected = false
             deviceInfo = nil
             storages = []
             selectedStorageID = nil
             items = []
+            selectedItems.removeAll()
             let message = error.localizedDescription
             lastError = message
             connectionMessage = Self.connectionHint(for: message)
@@ -216,6 +253,7 @@ struct TransferQueueItem: Identifiable {
         selectedStorageID = nil
         currentPath = "/"
         items = []
+        selectedItems.removeAll()
         await connectIfNeeded()
     }
 
@@ -241,6 +279,8 @@ struct TransferQueueItem: Identifiable {
             selectedItems = selectedItems.intersection(Set(items.map(\.id)))
             lastError = nil
         } catch {
+            items = []
+            selectedItems.removeAll()
             lastError = error.localizedDescription
         }
     }
@@ -252,7 +292,7 @@ struct TransferQueueItem: Identifiable {
             throw MTPBackendError.operation("InvalidPath", "Enter a valid folder name.")
         }
         try await backend.createFolder(storageID: storageID, path: Self.join(currentPath, cleanName))
-        recentActivity.insert("Created folder \(cleanName)", at: 0)
+        recordActivity("Created folder \(cleanName)")
         await loadDirectory()
     }
 
@@ -263,7 +303,7 @@ struct TransferQueueItem: Identifiable {
             throw MTPBackendError.operation("InvalidPath", "Enter a valid file name.")
         }
         try await backend.rename(storageID: storageID, path: item.path, newName: cleanName)
-        recentActivity.insert("Renamed \(item.name) to \(cleanName)", at: 0)
+        recordActivity("Renamed \(item.name) to \(cleanName)")
         await loadDirectory()
     }
 
@@ -272,7 +312,7 @@ struct TransferQueueItem: Identifiable {
         let selectedPaths = items.filter { selectedItems.contains($0.id) }.map(\.path)
         guard !selectedPaths.isEmpty else { return }
         try await backend.delete(storageID: storageID, paths: selectedPaths)
-        recentActivity.insert("Deleted \(selectedPaths.count) item(s)", at: 0)
+        recordActivity("Deleted \(selectedPaths.count) item(s)")
         selectedItems.removeAll()
         await loadDirectory()
     }
@@ -290,7 +330,7 @@ struct TransferQueueItem: Identifiable {
     }
 
     private func runTransfer(direction: TransferDirection, storageID: UInt32, sources: [String], destination: String, title: String) async {
-        var queueItem = TransferQueueItem(title: title, direction: direction)
+        let queueItem = TransferQueueItem(title: title, direction: direction)
         transferQueue.insert(queueItem, at: 0)
         let id = queueItem.id
         transferQueueVisible = true
@@ -298,32 +338,34 @@ struct TransferQueueItem: Identifiable {
             try await backend.transfer(direction: direction, storageID: storageID, sources: sources, destination: destination, onPreprocess: { _ in }) { [weak self] progress in
                 Task { @MainActor in self?.updateProgress(progress, id: id) }
             }
-            queueItem.state = .complete
-            queueItem.progress = 1
-            updateTransfer(queueItem)
-            recentActivity.insert("\(title) completed", at: 0)
+            if let index = transferQueue.firstIndex(where: { $0.id == id }) {
+                if case .failed(let message) = transferQueue[index].state {
+                    lastError = message
+                } else {
+                    transferQueue[index].state = .complete
+                    transferQueue[index].progress = 1
+                }
+            }
+            recordActivity("\(title) completed")
             if direction == .upload { await loadDirectory() }
         } catch {
-            queueItem.state = .failed(error.localizedDescription)
-            updateTransfer(queueItem)
+            if let index = transferQueue.firstIndex(where: { $0.id == id }) {
+                transferQueue[index].state = .failed(error.localizedDescription)
+            }
             lastError = error.localizedDescription
         }
     }
 
     private func updateProgress(_ progress: MTPTransferProgress, id: UUID) {
         guard let data = progress.data,
-              let index = transferQueue.firstIndex(where: { $0.id == id }) else { return }
+              let index = transferQueue.firstIndex(where: { $0.id == id }),
+              case .running = transferQueue[index].state else { return }
         transferQueue[index].progress = min(1, max(0, data.bulkFileSize.progress / 100))
         transferQueue[index].currentFile = data.name
         transferQueue[index].speed = data.speed
         if let error = progress.error, !error.isEmpty {
             transferQueue[index].state = .failed(error)
         }
-    }
-
-    private func updateTransfer(_ item: TransferQueueItem) {
-        guard let index = transferQueue.firstIndex(where: { $0.id == item.id }) else { return }
-        transferQueue[index] = item
     }
 
     private static func normalizedDevicePath(_ path: String) -> String {
@@ -337,6 +379,11 @@ struct TransferQueueItem: Identifiable {
 
     private func nameBefore(_ lhs: BrowserItem, _ rhs: BrowserItem) -> Bool {
         lhs.name.localizedStandardCompare(rhs.name) == .orderedAscending
+    }
+
+    private func recordActivity(_ message: String) {
+        recentActivity.insert(message, at: 0)
+        if recentActivity.count > 100 { recentActivity.removeLast(recentActivity.count - 100) }
     }
 
     private static func connectionHint(for message: String) -> String {
