@@ -3,7 +3,7 @@ import Foundation
 import ImageIO
 
 guard CommandLine.arguments.count == 3 else {
-    fatalError("Usage: GenerateAppIcon.swift <glass-background.png> <iconset-output>")
+    fatalError("Usage: GenerateAppIcon.swift <glass-background.svg> <iconset-output>")
 }
 
 let backgroundURL = URL(fileURLWithPath: CommandLine.arguments[1])
