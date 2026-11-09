@@ -33,6 +33,12 @@ struct BrowserWindow: View {
         }
         .navigationSplitViewStyle(.balanced)
         .task { await model.startDeviceMonitor() }
+        .onChange(of: model.isConnected) { _, connected in
+            if !connected {
+                path.removeAll()
+                model.selectedItems.removeAll()
+            }
+        }
         .onChange(of: path) { _, newPath in
             Task { await model.loadDirectory(path: devicePath(newPath)) }
         }
@@ -115,7 +121,7 @@ struct BrowserWindow: View {
         List {
             Section("Devices") {
                 HStack(spacing: 9) {
-                    Image(systemName: "iphone.gen3").foregroundStyle(.secondary)
+                    Image(systemName: "iphone").foregroundStyle(.secondary)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(model.deviceName).fontWeight(.semibold).lineLimit(1)
                         Text(model.isConnected ? "Android · USB" : "Not connected")
@@ -154,11 +160,6 @@ struct BrowserWindow: View {
                     .buttonStyle(.plain)
                 }
             }
-            Section("This Mac") {
-                Label(NSHomeDirectory(), systemImage: "house")
-                    .lineLimit(1)
-                    .foregroundStyle(.secondary)
-            }
         }
         .listStyle(.sidebar)
         .safeAreaInset(edge: .bottom) {
@@ -179,7 +180,7 @@ struct BrowserWindow: View {
 
     private var deviceHeader: some View {
         HStack(spacing: 16) {
-            Image(systemName: "iphone.gen3")
+                Image(systemName: "iphone")
                 .font(.system(size: 27, weight: .thin))
                 .foregroundStyle(.secondary)
                 .frame(width: 42, height: 52)
@@ -209,7 +210,7 @@ struct BrowserWindow: View {
             recentView
         } else if !model.isConnected {
             ContentUnavailableView {
-                Label("Connect an Android Device", systemImage: "cable.connector")
+                Label("Connect an Android Device", systemImage: "externaldrive.connected.to.line.below")
             } description: {
                 Text(model.connectionMessage)
             } actions: {
@@ -217,6 +218,9 @@ struct BrowserWindow: View {
                     .disabled(model.isConnecting)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else if model.selectedStorageID == nil {
+            ContentUnavailableView("No Storage Available", systemImage: "externaldrive", description: Text(model.connectionMessage))
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
             VStack(spacing: 0) {
                 HStack {
@@ -244,7 +248,12 @@ struct BrowserWindow: View {
                         onDownload: chooseDownloadLocation
                     )
                 } else {
-                    FileGridView(path: $path)
+                    FileGridView(
+                        path: $path,
+                        onRename: beginRename,
+                        onDelete: { showDeleteConfirmation = true },
+                        onDownload: chooseDownloadLocation
+                    )
                 }
                 if model.transferQueueVisible { transferFooter }
             }
@@ -252,8 +261,10 @@ struct BrowserWindow: View {
     }
 
     private var recentView: some View {
-        List(model.recentActivity, id: \.self) { activity in
-            Label(activity, systemImage: "clock")
+        List {
+            ForEach(model.recentActivity.indices, id: \.self) { index in
+                Label(model.recentActivity[index], systemImage: "clock")
+            }
         }
         .overlay {
             if model.recentActivity.isEmpty {
@@ -302,7 +313,7 @@ struct BrowserWindow: View {
         HStack {
             Text("\(model.selectedItems.count) selected")
             Spacer()
-            Text(model.isConnected ? "OpenMTP Native · \(model.deviceName)" : "OpenMTP Native")
+            Text(model.isConnected ? "OpenMTP · \(model.deviceName)" : "OpenMTP")
         }
         .font(.caption).foregroundStyle(.secondary).padding(.horizontal, 20).padding(.vertical, 8)
     }
@@ -315,7 +326,7 @@ struct BrowserWindow: View {
         let panel = NSOpenPanel()
         panel.title = "Choose files to copy to the device"
         panel.canChooseFiles = true
-        panel.canChooseDirectories = false
+        panel.canChooseDirectories = true
         panel.allowsMultipleSelection = true
         guard panel.runModal() == .OK else { return }
         Task { await model.upload(panel.urls) }
