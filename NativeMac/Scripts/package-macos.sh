@@ -65,6 +65,16 @@ codesign --force --deep --sign - "$APP_PATH"
 codesign --verify --deep --strict "$APP_PATH"
 cp -R "$APP_PATH" "$STAGING_PATH/"
 ln -s /Applications "$STAGING_PATH/Applications"
-hdiutil create -volname OpenMTP -srcfolder "$STAGING_PATH" -format UDZO -ov "$DMG_PATH"
+test -d "$APP_PATH/Contents/Resources/bin"
+test -L "$STAGING_PATH/Applications"
+for attempt in 1 2 3; do
+  rm -f "$DMG_PATH"
+  if hdiutil create -volname OpenMTP -srcfolder "$STAGING_PATH" -format UDZO -ov "$DMG_PATH"; then
+    break
+  fi
+  echo "DMG creation attempt $attempt failed; retrying after checking staged files." >&2
+  find "$STAGING_PATH" -maxdepth 2 -print >&2
+  sleep 2
+done
 hdiutil imageinfo "$DMG_PATH"
 test -s "$DMG_PATH"
