@@ -1,0 +1,53 @@
+name: Build Native macOS UI
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - master
+    paths:
+      - 'NativeMac/**'
+      - 'package.json'
+      - 'internals/scripts/package-current.js'
+      - 'internals/scripts/start-current.js'
+      - 'build/mac/bin/arm64/kalam-seg5.dylib'
+      - 'build/mac/bin/arm64/libusb-seg5.dylib'
+      - '.github/workflows/build-native-macos.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: native-macos-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  macos:
+    name: Build macOS app and DMG
+    runs-on: xcode-27
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Verify Apple toolchain
+        run: |
+          xcodebuild -version
+          swift --version
+          SDK_VERSION="$(xcrun --sdk macosx --show-sdk-version)"
+          echo "macOS SDK: $SDK_VERSION"
+          test "${SDK_VERSION%%.*}" -ge 27
+      - name: Build, sign, and package the native app
+        run: bash NativeMac/Scripts/package-macos.sh
+      - name: Verify bundle and installer
+        run: |
+          test -d dist/mac/OpenMTP.app
+          test -s dist/mac/OpenMTP.app/Contents/Resources/AppIcon.icns
+          test -s dist/OpenMTPNative-macOS.dmg
+          codesign --verify --deep --strict dist/mac/OpenMTP.app
+          hdiutil imageinfo dist/OpenMTPNative-macOS.dmg
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: OpenMTPNative-macOS
+          path: dist/OpenMTPNative-macOS.dmg
+          if-no-files-found: error
+          retention-days: 30

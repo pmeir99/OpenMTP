@@ -3,7 +3,7 @@
 - Author: [Ganesh Rathinavel](https://www.linkedin.com/in/ganeshrvel 'Ganesh Rathinavel')
 - Author's Website: [ganeshrvel.com](https://www.ganeshrvel.com 'ganeshrvel.com')
 - License: [MIT](https://github.com/ganeshrvel/openmtp/blob/master/LICENSE 'MIT')
-- System Requirements: macOS 10.14 (Mojave) or higher. macOS 10.13 and earlier have limited support and require OpenMTP v3.1.15 with Legacy MTP mode.
+- System Requirements: the native macOS app in this branch requires macOS 27+ and Apple Silicon. The older Electron release supports macOS 10.14 and later; macOS 10.13 and earlier require OpenMTP v3.1.15 with Legacy MTP mode.
 - Website URL: [https://openmtp.ganeshrvel.com](https://openmtp.ganeshrvel.com/ 'https://openmtp.ganeshrvel.com')
 - Guide: [How to Transfer Files Between Mac and Android or Other MTP Devices using OpenMTP](https://openmtp.ganeshrvel.com/how-to-connect-devices.html 'How to Transfer Files Between Mac and Android or Other MTP Devices using OpenMTP')
 - FAQ: [https://openmtp.ganeshrvel.com/#faq](https://openmtp.ganeshrvel.com/#faq 'https://openmtp.ganeshrvel.com/#faq')
@@ -35,18 +35,17 @@ The next generation of OpenMTP is in active development and coming soon. It's a 
 
 ### Features
 
-- Safe, Transparent and Open-Source
-- Plug and Play via USB. No hassles, easy and instant connection.
-- Select between Internal Memory and SD Card
-- Transfer multiple files which are larger than 4GB
-- Dark mode
-- Drag-and-drop support
-- Split pane views for both Local Computer and Android device
-- Choose between Grid and List view.
-- Use Keyboard Shortcuts to navigate through your files.
-- No collection of personally identifiable information.
+- Native SwiftUI interface with Apple SF Symbols for all in-app icons.
+- USB MTP device discovery with storage selection and disconnect recovery.
+- Browse device files in list or icon view, search, and show hidden files.
+- Create folders, rename and delete items, and upload or download files and folders.
+- View transfer progress and device storage capacity.
+
+The native interface does not yet include local-folder browsing, drag-and-drop, or full keyboard-shortcut parity. It requires an unlocked device with USB File Transfer enabled. Physical Android-device validation is still needed.
 
 ### Installation
+
+For the native app in this branch, run **Actions → Build Native macOS UI** and download the `OpenMTPNative-macOS` artifact. It targets Apple Silicon, requires macOS 27+, and is ad-hoc signed. It is not yet notarized. The links below are for the published upstream release.
 
 > ⚠️ **Only download OpenMTP from the official sources below.** There are copycat websites that use the OpenMTP name, logo and content, redirect to various other pages. The only official sources are the official website [openmtp.ganeshrvel.com](https://openmtp.ganeshrvel.com/ 'https://openmtp.ganeshrvel.com'), this Github repository [github.com/ganeshrvel/openmtp](https://github.com/ganeshrvel/openmtp 'https://github.com/ganeshrvel/openmtp'), and [formulae.brew.sh/cask/openmtp](https://formulae.brew.sh/cask/openmtp 'Homebrew Cask').
 
@@ -84,11 +83,15 @@ If the latest OpenMTP doesn't launch or doesn't work on your older Mac, use [Ope
 
 ### Screengrabs
 
+The screenshots below show the legacy Electron interface, not the native SwiftUI app.
+
 ![OpenMTP File Explorer](https://github.com/ganeshrvel/openmtp/raw/master/blobs/images/file-explorer-bluebg.jpg 'OpenMTP File Explorer')
 
 ![OpenMTP File Transfer](https://github.com/ganeshrvel/openmtp/raw/master/blobs/images/file-transfer-bluebg.jpg 'OpenMTP File Transfer')
 
-### Keyboard Shortcuts
+### Legacy Electron Keyboard Shortcuts
+
+These shortcuts apply to the legacy Electron interface; native shortcut parity is still in progress.
 
 | Command                                           | Keyboard Shortcut                                                            |
 | ------------------------------------------------- | ---------------------------------------------------------------------------- |
@@ -153,7 +156,7 @@ Building from source, packaging, publishing and debugging are documented in [DEV
 
 - This app was built upon [https://github.com/ganeshrvel/electron-react-redux-advanced-boilerplate](https://github.com/ganeshrvel/electron-react-redux-advanced-boilerplate 'https://github.com/ganeshrvel/electron-react-redux-advanced-boilerplate'), which is a heavily modified fork of [https://github.com/electron-react-boilerplate/electron-react-boilerplate](https://github.com/electron-react-boilerplate/electron-react-boilerplate 'https://github.com/electron-react-boilerplate/electron-react-boilerplate').
 
-- The icons used in the app were made by [flaticon](https://www.flaticon.com), [good-ware](https://www.flaticon.com/authors/good-ware) and [kiranshastry](https://www.flaticon.com/authors/kiranshastry) which are licensed under [CC 3.0 BY](https://creativecommons.org/licenses/by/3.0/ 'Creative Commons BY 3.0').
+- The icons used in the legacy interface were made by [flaticon](https://www.flaticon.com), [good-ware](https://www.flaticon.com/authors/good-ware) and [kiranshastry](https://www.flaticon.com/authors/kiranshastry) which are licensed under [CC 3.0 BY](https://creativecommons.org/licenses/by/3.0/ 'Creative Commons BY 3.0').
 
 - The "no image found" icon was made by [Phonlaphat Thongsriphong](https://www.iconfinder.com/phatpc 'Phonlaphat Thongsriphong').
 
