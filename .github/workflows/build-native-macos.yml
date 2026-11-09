@@ -7,6 +7,7 @@ on:
       - feature/native-macos-ui
     paths:
       - 'NativeMac/**'
+      - 'package.json'
       - 'build/mac/bin/arm64/kalam-seg5.dylib'
       - 'build/mac/bin/arm64/libusb-seg5.dylib'
       - '.github/workflows/build-native-macos.yml'
@@ -14,8 +15,6 @@ on:
 permissions:
   contents: read
 
-# Keep only the newest UI build for this branch; a stale queued build cannot
-# produce a useful artifact once a newer commit exists.
 concurrency:
   group: native-macos-${{ github.ref }}
   cancel-in-progress: true
@@ -34,44 +33,15 @@ jobs:
           SDK_VERSION="$(xcrun --sdk macosx --show-sdk-version)"
           echo "macOS SDK: $SDK_VERSION"
           test "${SDK_VERSION%%.*}" -ge 27
-      - name: Build native Swift app
-        working-directory: NativeMac
-        run: swift build -c release --product OpenMTPNative
-      - name: Package .app and .dmg
+      - name: Build, sign, and package the native app
+        run: bash NativeMac/Scripts/package-macos.sh
+      - name: Verify bundle and installer
         run: |
-          set -euo pipefail
-          APP="dist/OpenMTP Native.app"
-          DMG_SOURCE="dist/OpenMTP Native"
-          DMG_PATH="dist/OpenMTPNative-macOS.dmg"
-          mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$DMG_SOURCE"
-          mkdir -p "$APP/Contents/Resources/bin"
-          cp NativeMac/.build/release/OpenMTPNative "$APP/Contents/MacOS/OpenMTPNative"
-          cp build/mac/bin/arm64/kalam-seg5.dylib "$APP/Contents/Resources/bin/"
-          cp build/mac/bin/arm64/libusb-seg5.dylib "$APP/Contents/Resources/bin/"
-          file "$APP/Contents/Resources/bin/"*.dylib
-          chmod +x "$APP/Contents/MacOS/OpenMTPNative"
-          cat > "$APP/Contents/Info.plist" <<'PLIST'
-          <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0"><dict>
-            <key>CFBundleExecutable</key><string>OpenMTPNative</string>
-            <key>CFBundleIdentifier</key><string>com.openmtp.native.preview</string>
-            <key>CFBundleName</key><string>OpenMTP Native</string>
-            <key>CFBundleDisplayName</key><string>OpenMTP Native</string>
-            <key>CFBundlePackageType</key><string>APPL</string>
-            <key>CFBundleShortVersionString</key><string>0.1.0</string>
-            <key>CFBundleVersion</key><string>1</string>
-            <key>LSMinimumSystemVersion</key><string>27.0</string>
-            <key>NSHighResolutionCapable</key><true/>
-          </dict></plist>
-          PLIST
-          plutil -lint "$APP/Contents/Info.plist"
-          codesign --force --deep --sign - "$APP"
-          codesign --verify --deep --strict "$APP"
-          cp -R "$APP" "$DMG_SOURCE/"
-          diskutil image create from --format UDZO "$DMG_SOURCE" "$DMG_PATH"
-          diskutil image info "$DMG_PATH"
-          test -s "$DMG_PATH"
+          test -d dist/mac/OpenMTP.app
+          test -s dist/mac/OpenMTP.app/Contents/Resources/AppIcon.icns
+          test -s dist/OpenMTPNative-macOS.dmg
+          codesign --verify --deep --strict dist/mac/OpenMTP.app
+          hdiutil imageinfo dist/OpenMTPNative-macOS.dmg
       - name: Upload installer
         uses: actions/upload-artifact@v4
         with:
