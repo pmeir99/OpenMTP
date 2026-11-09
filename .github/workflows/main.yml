@@ -1,10 +1,10 @@
-name: CI
+name: Build OpenMTP for macOS
 
 on:
   push:
-    branches: [ master ]
+    branches: [master]
   pull_request:
-    branches: [ master ]
+    branches: [master]
     paths-ignore:
       - 'NativeMac/**'
       - '.github/workflows/build-native-macos.yml'
@@ -15,35 +15,23 @@ permissions:
 
 jobs:
   build:
-    # macOS 11 is retired. NativeMac has a dedicated workflow; this legacy
-    # Electron build only runs for changes to the original application.
-    runs-on: macos-15
+    runs-on: xcode-27
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Setup build environment
-        uses: actions/setup-node@v4
-        with:
-          node-version: '16.x'
-      - run: npm install --global cross-env create-dmg
-      - name: Install dependencies
-        run: yarn
-      - name: Build OpenMTP
-        run: yarn build
-      - name: Package unsigned macOS app
+      - name: Build native app and installer
+        run: bash NativeMac/Scripts/package-macos.sh
+      - name: Verify bundle and installer
         run: |
-          export CSC_IDENTITY_AUTO_DISCOVERY=false
-          yarn package-mac-without-notarize
-      - name: Check app bundle
-        run: test -d dist/mac/OpenMTP.app
-      - name: Create disk image and checksum
-        run: |
-          mkdir -p dist/dmg
-          create-dmg dist/mac/OpenMTP.app dist/dmg
-          shasum -a 256 dist/dmg/* > dist/dmg/CHECKSUM_SHA256.txt
-      - name: Upload disk image and checksum
+          test -d dist/mac/OpenMTP.app
+          test -s dist/mac/OpenMTP.app/Contents/Resources/AppIcon.icns
+          test -s dist/OpenMTPNative-macOS.dmg
+          codesign --verify --deep --strict dist/mac/OpenMTP.app
+          hdiutil imageinfo dist/OpenMTPNative-macOS.dmg
+      - name: Upload installer
         uses: actions/upload-artifact@v4
         with:
-          name: OpenMTP-Disk-Image
-          path: dist/dmg/
+          name: OpenMTP-macOS
+          path: dist/OpenMTPNative-macOS.dmg
           if-no-files-found: error
+          retention-days: 30
