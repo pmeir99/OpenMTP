@@ -383,4 +383,3 @@ private struct MTPEnvelope<Value: Decodable>: Decodable {
     var error: String?
     var data: Value?
 }
-                    }
