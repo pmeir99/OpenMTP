@@ -26,6 +26,22 @@ $ yarn
 
 ### Run
 
+#### Native macOS app
+
+Requires Xcode 27+, the macOS 27 SDK, Apple Silicon, and the repository's bundled ARM64 Kalam and libusb libraries.
+
+```shell
+# Run the native SwiftUI app
+$ yarn start-native-mac
+
+# Build the native app bundle and installer DMG
+$ yarn package-mac
+```
+
+A Mac build uses the SwiftUI interface and generated Apple SF Symbols app icon. The Electron interface remains a fallback for non-macOS targets.
+
+#### Legacy Electron interface
+
 A fresh clone might throw _undefined state_ error. Run the following commands once to fix the issue.
 
 ```shell
@@ -38,10 +54,10 @@ $ set UPGRADE_EXTENSIONS=1 && npm run dev
 
 ```shell
 # Development
-$ yarn dev
+$ yarn dev-electron
 
-# Pre-production
-$ yarn start
+# Electron Mac package for legacy UI testing only
+$ yarn package-mac-electron
 
 ```
 
