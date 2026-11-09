@@ -9,6 +9,9 @@ on:
       - 'NativeMac/**'
       - '.github/workflows/build-native-macos.yml'
       - '.github/workflows/main.yml'
+      - 'package.json'
+      - 'internals/scripts/package-current.js'
+      - 'internals/scripts/start-current.js'
 
 permissions:
   contents: read
