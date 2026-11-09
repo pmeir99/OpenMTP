@@ -8,6 +8,8 @@ on:
     paths:
       - 'NativeMac/**'
       - 'package.json'
+      - 'internals/scripts/package-current.js'
+      - 'internals/scripts/start-current.js'
       - 'build/mac/bin/arm64/kalam-seg5.dylib'
       - 'build/mac/bin/arm64/libusb-seg5.dylib'
       - '.github/workflows/build-native-macos.yml'
