@@ -3,6 +3,9 @@ import SwiftUI
 struct FileListView: View {
     @Environment(BrowserModel.self) private var model
     @Binding var path: [String]
+    var onRename: (BrowserItem) -> Void
+    var onDelete: () -> Void
+    var onDownload: () -> Void
 
     var body: some View {
         @Bindable var model = model
@@ -35,18 +38,20 @@ struct FileListView: View {
             .width(min: 80, ideal: 100)
         }
         .tableStyle(.inset(alternatesRowBackgrounds: true))
-        .contextMenu(forSelectionType: UUID.self) { ids in
+        .contextMenu(forSelectionType: String.self) { ids in
             Button("Open") {
                 if let item = model.items.first(where: { ids.contains($0.id) }), item.isFolder { path.append(item.name) }
             }
             Button("Get Info") { model.inspectorVisible = true }
             Divider()
-            Button("Copy to Mac") { }
-                .disabled(true)
-            Button("Rename") { }
-                .disabled(true)
-            Button("Move to Trash", role: .destructive) { }
-                .disabled(true)
+            Button("Copy to Mac") { onDownload() }
+                .disabled(ids.isEmpty)
+            Button("Rename") {
+                if let item = model.items.first(where: { ids.contains($0.id) }) { onRename(item) }
+            }
+            .disabled(ids.count != 1)
+            Button("Delete", role: .destructive) { onDelete() }
+                .disabled(ids.isEmpty)
         }
     }
 }
@@ -106,8 +111,8 @@ struct InspectorView: View {
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
             Divider()
-            LabeledContent("Device", value: "Pixel 9 Pro")
-            LabeledContent("Connection", value: "Preview")
+            LabeledContent("Device", value: model.deviceName)
+            LabeledContent("Connection", value: model.isConnected ? "USB · MTP" : "Not connected")
             Spacer()
         }
         .padding(22)

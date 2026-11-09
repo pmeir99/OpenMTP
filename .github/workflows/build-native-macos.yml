@@ -7,6 +7,8 @@ on:
       - feature/native-macos-ui
     paths:
       - 'NativeMac/**'
+      - 'build/mac/bin/arm64/kalam-seg5.dylib'
+      - 'build/mac/bin/arm64/libusb-seg5.dylib'
       - '.github/workflows/build-native-macos.yml'
 
 permissions:
@@ -42,7 +44,11 @@ jobs:
           DMG_SOURCE="dist/OpenMTP Native"
           DMG_PATH="dist/OpenMTPNative-macOS.dmg"
           mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$DMG_SOURCE"
+          mkdir -p "$APP/Contents/Resources/bin"
           cp NativeMac/.build/release/OpenMTPNative "$APP/Contents/MacOS/OpenMTPNative"
+          cp build/mac/bin/arm64/kalam-seg5.dylib "$APP/Contents/Resources/bin/"
+          cp build/mac/bin/arm64/libusb-seg5.dylib "$APP/Contents/Resources/bin/"
+          file "$APP/Contents/Resources/bin/"*.dylib
           chmod +x "$APP/Contents/MacOS/OpenMTPNative"
           cat > "$APP/Contents/Info.plist" <<'PLIST'
           <?xml version="1.0" encoding="UTF-8"?>

@@ -1,11 +1,41 @@
 import SwiftUI
 
 struct TransfersView: View {
+    @Environment(BrowserModel.self) private var model
+
     var body: some View {
-        ContentUnavailableView {
-            Label("Transfer Queue", systemImage: "arrow.left.arrow.right")
-        } description: {
-            Text("Your file transfers and their progress will appear here. This native UI preview does not connect to the existing MTP backend.")
+        List(model.transferQueue) { transfer in
+            VStack(alignment: .leading, spacing: 9) {
+                HStack {
+                    Image(systemName: transfer.direction == .upload ? "arrow.down.to.line" : "arrow.up.to.line")
+                        .foregroundStyle(.secondary)
+                    Text(transfer.title).fontWeight(.medium)
+                    Spacer()
+                    switch transfer.state {
+                    case .running: Text("Transferring").foregroundStyle(.secondary)
+                    case .complete: Label("Complete", systemImage: "checkmark.circle.fill").foregroundStyle(.green)
+                    case .failed: Label("Failed", systemImage: "exclamationmark.circle.fill").foregroundStyle(.red)
+                    }
+                }
+                if case .running = transfer.state {
+                    ProgressView(value: transfer.progress)
+                    HStack {
+                        Text(transfer.currentFile.isEmpty ? "Preparing…" : transfer.currentFile)
+                        Spacer()
+                        if transfer.speed > 0 { Text(String(format: "%.1f MB/s", transfer.speed)) }
+                    }
+                    .font(.caption).foregroundStyle(.secondary)
+                }
+                if case .failed(let message) = transfer.state {
+                    Text(message).font(.caption).foregroundStyle(.red)
+                }
+            }
+            .padding(.vertical, 5)
+        }
+        .overlay {
+            if model.transferQueue.isEmpty {
+                ContentUnavailableView("No Transfers", systemImage: "arrow.left.arrow.right", description: Text("Uploads and downloads will appear here."))
+            }
         }
     }
 }
@@ -32,8 +62,8 @@ struct PreferencesView: View {
             .tabItem { Label("General", systemImage: "gearshape") }.tag(0)
 
             Form {
-                LabeledContent("Transfer Engine", value: "Not connected")
-                Text("Transfer settings will become available when the native UI is connected to the original OpenMTP backend.")
+                LabeledContent("Transfer Engine", value: model.isConnected ? "Kalam MTP" : "Waiting for device")
+                Text("Connect an Android device over USB and select File Transfer mode to browse its storage.")
                     .foregroundStyle(.secondary)
             }
             .padding(20)
@@ -44,7 +74,7 @@ struct PreferencesView: View {
                     .font(.largeTitle)
                     .foregroundStyle(.secondary)
                 Text("OpenMTP Native").font(.headline)
-                Text("UI concept for macOS 26 and later")
+                Text("Native macOS 27 app")
                     .font(.subheadline).foregroundStyle(.secondary)
                 Text("OpenMTP original project is MIT licensed.")
                     .font(.caption).foregroundStyle(.tertiary)
