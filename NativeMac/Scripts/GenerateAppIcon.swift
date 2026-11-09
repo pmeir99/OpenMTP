@@ -11,7 +11,7 @@ let iconsetURL = URL(fileURLWithPath: CommandLine.arguments[2], isDirectory: tru
 let masterURL = iconsetURL.appendingPathComponent("icon_1024x1024.png")
 let iconSize: CGFloat = 1024
 let symbols = [
-    "archivebox", "arrow.clockwise", "arrow.down.to.line", "arrow.left.arrow.right",
+    "archivebox", "arrow.clockwise", "chevron.left", "arrow.down.to.line", "arrow.left.arrow.right",
     "arrow.left.arrow.right.circle", "arrow.up.arrow.down", "arrow.up.to.line", "checkmark.circle.fill",
     "clock", "doc", "doc.richtext", "doc.text.magnifyingglass", "exclamationmark.circle.fill",
     "exclamationmark.triangle", "externaldrive", "externaldrive.connected.to.line.below", "film",
